@@ -1,6 +1,6 @@
 #setwd("C:/Users/Myrmica/Desktop/side projects/shark tank")
 
-shark.dat <- read.csv("shark tank.csv", header=TRUE)
+shark.dat <- read.csv("shark.tank.csv", header=TRUE)
 str(shark.dat)
 
 #cumulative foraging time model

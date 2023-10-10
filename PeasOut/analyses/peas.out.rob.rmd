@@ -1,0 +1,526 @@
+---
+title: "Peas Out Rob"
+author: "Rob Clark & Riley Anderson"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+graphics: yes
+output:
+  github_document:
+    toc: yes
+    toc_depth: 5
+    pandoc_args: --webtex
+  html_document:
+    keep_md: yes
+    theme: readable
+    mathjax: default
+  html_notebook:
+    code_folding: hide
+    theme: readable
+    mathjax: default
+  pdf_document:
+    toc: yes
+header-includes:
+  \usepackage{float}
+  \floatplacement{figure}{H}
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include = F}
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# @@@@@ Knitr Options
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Set root directory to the project directory
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+
+# Set default knitr options: 
+# Suppress warnings and messages, cache chunks, 
+#  set default figure size to 6x8 at 300 dpi, and save a png and pdf
+knitr::opts_chunk$set(warning = F, message = F, collapse = T, cache = T,
+    fig.height = 6, fig.width = 8, dpi = 300, # 6x8" @ 300dpi:1800x2400=4.3MP
+    dev = c('png', 'pdf'), dev.args = list(pdf = list(onefile = F)))
+
+```
+
+
+
+## Overview
+
+This analysis explores Rob Clark's "Peas Out" data. 
+
+## Experimental Design
+
+24 bug dorms (2m x 2m x 2m) were established on an experimental farm plot that was sown with banner pea. The dorms were laid out in a square design with 8 control dorms in the center. Control dorms were flanked by 2 sides (4 dorms/side) where common vetch was planted in the distal half (the outer circumference of the square) and banner pea was planted in the proximal half (the inner circumference of the square). Diagonally from the vetch dorms were 2 sides similarly planted with red clover.
+
+```{r experimmental_design_image, echo = F}
+
+knitr::include_graphics("PeasOut/images/peas.out.design.png", error = FALSE)
+
+```
+
+Pea aphids were introduced to all dorms. In the vetch/clover dorms, aphids were added to the alternative host plants, in the pea-only control dorms, aphids were added to plants on one side of the dorms. These plants are considered the "source" plants, while the remaining pea plants in each dorm were considered the "recipients". Aphid spread to recipient plants was quantified as the number of pea plants with 1) no aphids, 2) moderate infestation, 3) heavy infestation, 4) tissue damage, and 5) dead plants.
+
+Ladybird beetles were added to half of all dorms (30 total, 19 adults, 10 pupae, and 1 larva). A final count of ladybird pupae in each dorm was recorded.
+
+PEMV presence was quantified in recipient plants from 6 samples/dorm. 
+
+The total number of pea plants/dorm was recorded as well as total number of pea pods.
+
+### Summary of Results
+* 
+
+```{r Main_Code, include = F, cache = F}
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# @@@@@ Setup - This code is run, but output is hidden
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Load Packages
+library("lme4")
+library("car")
+library("multcomp")
+library(tidyverse)
+library("emmeans")
+library("MuMIn")
+library("piecewiseSEM")
+library("multcompView")
+library(glmmTMB)
+library(sjPlot)
+
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# @@@@@ Data Preparation
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Import datasets
+
+
+po.virus.dat <- read.csv("data/POEdata/peas.out.pemv.csv", header=TRUE)
+
+aphid.dat <- read.csv("data/POEdata/peas.out.csv", header = TRUE)
+
+weevils <- read.csv("data/POEdata/weevils.csv", header=TRUE)
+
+pupae <- read.csv("data/POEdata/predators.csv", header=TRUE)
+
+shark.dat <- read.csv("data/STEdata/shark.tank.csv", header=TRUE)
+
+```
+
+
+```{r Data_Wrangling, echo = F, comment = ""}
+
+po.virus.dat <- po.virus.dat %>% 
+    mutate(aphid.plants = Moderate.Infestation + Heavy.Infestation)
+
+```
+
+## Aphid models
+
+###
+```{r aphid_plants_full_model, echo = F}
+
+aphid.mod1 <- glm(Moderate.Infestation + Heavy.Infestation ~
+                      Plant.Treatment * Predator.Treatment +
+                      Ladybug.pupae,
+                  family = poisson(),
+                  data = po.virus.dat)
+
+# summary(aphid.mod1)
+# plot_model(aphid.mod1,
+#            type = "pred",
+#            terms = c("Plant.Treatment",
+#                      "Predator.Treatment"))
+
+aphid.mod2 <- glm(Moderate.Infestation + Heavy.Infestation ~
+                      Plant.Treatment * Predator.Treatment *
+                      Ladybug.pupae,
+                  family = poisson(),
+                  data = po.virus.dat)
+# summary(aphid.mod2)
+# plot_model(aphid.mod2,
+#            type = "pred",
+#            terms = c("Ladybug.pupae",
+#                      "Predator.Treatment",
+#                      "Plant.Treatment"))
+
+aphid.mod3 <- glm(Moderate.Infestation + Heavy.Infestation ~
+                      Plant.Treatment + Predator.Treatment +
+                      Ladybug.pupae,
+                  family = poisson(),
+                  data = po.virus.dat)
+
+aphid.mod4 <- glm(Moderate.Infestation + Heavy.Infestation ~
+                      Plant.Treatment + Predator.Treatment,
+                  family = poisson(),
+                  data = po.virus.dat)
+
+
+
+aphid.mod5 <- glm(Moderate.Infestation + Heavy.Infestation ~
+                      Plant.Treatment * Predator.Treatment,
+                  family = poisson(),
+                  data = po.virus.dat)
+
+# summary(aphid.mod5)
+# plot_model(aphid.mod5,
+#            type = "pred",
+#            terms = c("Plant.Treatment",
+#                      "Predator.Treatment"))
+
+
+aphid.mod6 <- glm(Moderate.Infestation + Heavy.Infestation ~
+                      Plant.Treatment * Ladybug.pupae,
+                  family = poisson(),
+                  data = po.virus.dat)
+
+
+
+aphid.mod7 <- glm(Moderate.Infestation + Heavy.Infestation ~
+                      Plant.Treatment + Ladybug.pupae,
+                  family = poisson(),
+                  data = po.virus.dat)
+
+
+aphid.mod8 <- glm(Moderate.Infestation + Heavy.Infestation ~
+                      Ladybug.pupae,
+                  family = poisson(),
+                  data = po.virus.dat)
+
+
+aphid.mod9 <- glm(Moderate.Infestation + Heavy.Infestation ~
+                      Plant.Treatment,
+                  family = poisson(),
+                  data = po.virus.dat)
+
+AIC(aphid.mod1,
+    aphid.mod2,
+    aphid.mod3,
+    aphid.mod4,
+    aphid.mod5,
+    aphid.mod6,
+    aphid.mod7,
+    aphid.mod8,
+    aphid.mod9)
+
+summary(aphid.mod9)
+
+plot_model(aphid.mod9,
+           type = "pred")
+```
+
+* Alternative plants are the only significant predictor of number of pea plants with aphids
+* Both red clover and vetch dorms had ~half the number of pea plants with aphids
+* Need to confirm that aphid counts were done only on recipient plants, otherwise models need to include pea plant count in the linear predictor.
+
+
+
+## PEMV models
+
+### Full PEMV model
+```{r PEMV_full_model, echo = F}
+plant.pemv.mod1 <- glm(cbind(Corners.infected, Corners.clean) ~ 
+                         Predator.Treatment * Plant.Treatment + 
+                         Ladybug.pupae,
+                     family = binomial, 
+                     data = po.virus.dat)
+
+plant.pemv.mod2 <- glm(cbind(Corners.infected, Corners.clean) ~ 
+                           Plant.Treatment,
+                       family = binomial(),
+                       data = po.virus.dat)
+
+plant.pemv.mod3 <- glm(cbind(Corners.infected, Corners.clean) ~ 
+                           Plant.Treatment * Ladybug.pupae,
+                       family = binomial(),
+                       data = po.virus.dat)
+
+plant.pemv.mod4 <- glm(cbind(Corners.infected, Corners.clean) ~ 
+                           Plant.Treatment * Ladybug.pupae,
+                       family = binomial(),
+                       data = po.virus.dat)
+
+plant.pemv.mod5 <- glm(cbind(Corners.infected, Corners.clean) ~
+                          Ladybug.pupae,
+                      family = binomial(),
+                      data = po.virus.dat)
+
+
+AIC(plant.pemv.mod1,
+    plant.pemv.mod2,
+    plant.pemv.mod3,
+    plant.pemv.mod4,
+    plant.pemv.mod5)
+
+summary(plant.pemv.mod2)
+
+plot_model(plant.pemv.mod2,
+           type = "pred")
+
+
+
+```
+
+* In simpler models, plant treatment effects PEMV, with red clover dorms having significantly less PEMV (*P* = `r summary(plant.pemv.mod2)$coefficients[2, 4]`)
+* However, in the full models, this effect is lost. Model selection justifies a *plant treatment* only model.
+
+
+```{r pemv_by_ladybugs_full_model, echo = F}
+
+plot_model(plant.pemv.mod1,
+           type = "pred",
+           terms = "Ladybug.pupae",
+           show.p = T)
+
+```
+
+* Ladybeetle pupae marginally increase PEMV (*P* = `r summary(plant.pemv.mod1)$coefficients[5, 4]`) in more complex models but the effect is lost on its own.
+
+
+
+
+### PEMV and aphids
+```{r PEMV_aphid_models, echo = F}
+
+pemv.aphid.mod1 <- glm(cbind(Corners.infected, Corners.clean) ~
+                          aphid.plants * Plant.Treatment * 
+                          Predator.Treatment + Ladybug.pupae,
+                      family = binomial(),
+                      data = po.virus.dat)
+
+pemv.aphid.mod2 <- glm(cbind(Corners.infected, Corners.clean) ~
+                          aphid.plants * Plant.Treatment + 
+                          Predator.Treatment + Ladybug.pupae,
+                      family = binomial(),
+                      data = po.virus.dat)
+
+pemv.aphid.mod3 <- glm(cbind(Corners.infected, Corners.clean) ~
+                          aphid.plants + Plant.Treatment + 
+                          Predator.Treatment + Ladybug.pupae,
+                      family = binomial(),
+                      data = po.virus.dat)
+
+pemv.aphid.mod4 <- glm(cbind(Corners.infected, Corners.clean) ~
+                          aphid.plants + Plant.Treatment * 
+                          Predator.Treatment + Ladybug.pupae,
+                      family = binomial(),
+                      data = po.virus.dat)
+
+pemv.aphid.mod5 <- glm(cbind(Corners.infected, Corners.clean) ~
+                          aphid.plants + Plant.Treatment + 
+                          Predator.Treatment,
+                      family = binomial(),
+                      data = po.virus.dat)
+
+pemv.aphid.mod6 <- glm(cbind(Corners.infected, Corners.clean) ~
+                          aphid.plants + Plant.Treatment,
+                      family = binomial(),
+                      data = po.virus.dat)
+
+pemv.aphid.mod7 <- glm(cbind(Corners.infected, Corners.clean) ~
+                          aphid.plants,
+                      family = binomial(),
+                      data = po.virus.dat)
+
+AIC(pemv.aphid.mod1,
+    pemv.aphid.mod2,
+    pemv.aphid.mod3,
+    pemv.aphid.mod4,
+    pemv.aphid.mod5,
+    pemv.aphid.mod6,
+    pemv.aphid.mod7)
+
+summary(pemv.aphid.mod4)
+
+plot_model(pemv.aphid.mod4,
+           type = "pred",
+           terms = "aphid.plants [all]")
+```
+
+* Essentially no effect of # pea plants with aphids on PEMV
+
+
+## Dead plants and plants with tissue damage
+
+### Dead plants by plant treatment
+```{r dead_by_plant_treatment, echo = F}
+
+dead.mod1 <- glm(Dead ~ Plant.Treatment, 
+                           family = poisson(),
+                           data = po.virus.dat)
+
+summary(dead.mod1)
+
+plot_model(dead.mod1,
+           type = "pred")
+```
+
+* Both vetch and red clover dorms had significantly fewer dead pea plants
+
+
+### Plants with tissue damage
+```{r tissue_damage_mods, echo = F}
+
+dead.mod1 <- glm(Tissue.Damage ~ Plant.Treatment * aphid.plants, 
+                           family = poisson(),
+                           data = po.virus.dat)
+
+summary(dead.mod1)
+
+plot_model(dead.mod1,
+           type = "pred",
+           terms = c("aphid.plants", "Plant.Treatment"))
+```
+
+* Plants with tissue damage is effected by both plant treatment and the number of plants infested with aphids.
+
+
+## Pea pods
+
+### Pea pods by plant and predator treatment (Rob's version)
+```{r peapods_rob_mod, echo = F}
+# 
+# yield.glm <- glm.nb(pea.pods ~ Predator.Treatment*Plant.Treatment, data=pupae)
+# 
+# summary(yield.glm)
+# 
+# yield.lsm <- emmeans(yield.glm, ~Predator.Treatment*Plant.Treatment)
+# yield.cld <- cld(yield.lsm, sort=FALSE, adjust="none", type="response")
+# yield.cld
+# 
+# 
+# 
+# 
+# yield.fig <- ggplot(yield.cld, aes(x=Plant.Treatment, y=response, fill=Predator.Treatment)) +
+#   geom_bar(stat="identity", width=0.8, position="dodge") +
+#   geom_errorbar(aes(ymin=response-(SE), ymax=response+(SE)), position=position_dodge(0.8), width=0.5) +
+#   theme_bw(base_size = 12) + 
+#   #geom_text(aes(x=Weevil.Treatment,y=emmean+2,label=tukey)) +
+#   #scale_x_discrete(limits=c("None","First","Second")) +
+#   theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+#   labs(y="Number of Pea Pods", x="Plant Treatment") +
+#   scale_fill_grey()
+# yield.fig
+
+
+```
+
+```{r yield_rob_glmmtmb, echo = F}
+
+# Yield (total pea pods) by plant treatment and predator treatment
+yield.glm2 <- glmmTMB(pea.pods ~ Predator.Treatment * Plant.Treatment,
+                     family = nbinom2(),
+                     data = pupae)
+
+summary(yield.glm2)
+
+yield.lsm2 <- emmeans(yield.glm2, ~Predator.Treatment*Plant.Treatment)
+yield.cld2 <- cld(yield.lsm2, sort=FALSE, adjust="none", type="response")
+yield.cld2
+
+
+
+
+yield.fig2 <- ggplot(yield.cld2, aes(x=Plant.Treatment, y=response, fill=Predator.Treatment)) +
+  geom_bar(stat="identity", width=0.8, position="dodge") +
+  geom_errorbar(aes(ymin=response-(SE), ymax=response+(SE)), position=position_dodge(0.8), width=0.5) +
+  theme_bw(base_size = 12) + 
+  #geom_text(aes(x=Weevil.Treatment,y=emmean+2,label=tukey)) +
+  #scale_x_discrete(limits=c("None","First","Second")) +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  labs(y="Number of Pea Pods", x="Plant Treatment") +
+  scale_fill_grey()
+#scale_x_discrete(breaks=c("Sap-feeders", "No Sap-feeders"),
+#                 labels=c("+ Sap-feeders", "- Sap-feeders")) +
+#annotate("text", x=2, y=18.5, label=" italic(P)<0.001", parse=TRUE) +
+#annotate("text", x=1, y= 13, label=" italic(P)==0.292", parse=TRUE) +
+#theme(axis.line.x = element_line(color="black", size = 0.5),
+#      axis.line.y = element_line(color="black", size = 0.5)) +
+#geom_text(nudge_y=(1)) +
+#facet_wrap( ~ Alternative.Host, nrow=3)
+yield.fig2
+
+```
+
+
+### Pea pods by plant and predator treatments (adjusted for # plants)
+```{r peapods_mods, echo = F}
+
+yieldpp.glm <- glmmTMB(pea.pods ~ 
+                          Predator.Treatment * Plant.Treatment +
+                          median.count, family = nbinom2(),
+                       data = pupae)
+
+summary(yieldpp.glm)
+
+plot_model(yieldpp.glm,
+           type = "pred",
+           terms = c("Plant.Treatment", "Predator.Treatment"))
+
+yieldpp.lsm <- emmeans(yieldpp.glm, ~Predator.Treatment*Plant.Treatment)
+
+yieldpp.cld <- cld(yieldpp.lsm, sort=FALSE, adjust="none", type="response")
+
+yieldpp.cld
+
+
+
+
+yieldpp.fig <- ggplot(yieldpp.cld, aes(x=Plant.Treatment, y=response, fill=Predator.Treatment)) +
+    geom_bar(stat="identity", width=0.8, position="dodge") +
+    geom_errorbar(aes(ymin=response-(SE), ymax=response+(SE)), position=position_dodge(0.8), width=0.5) +
+    theme_bw(base_size = 12) + 
+    #geom_text(aes(x=Weevil.Treatment,y=emmean+2,label=tukey)) +
+    #scale_x_discrete(limits=c("None","First","Second")) +
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+    labs(y="Number of Pea Pods", x="Plant Treatment") +
+    scale_fill_grey()
+#scale_x_discrete(breaks=c("Sap-feeders", "No Sap-feeders"),
+#                 labels=c("+ Sap-feeders", "- Sap-feeders")) +
+#annotate("text", x=2, y=18.5, label=" italic(P)<0.001", parse=TRUE) +
+#annotate("text", x=1, y= 13, label=" italic(P)==0.292", parse=TRUE) +
+#theme(axis.line.x = element_line(color="black", size = 0.5),
+#      axis.line.y = element_line(color="black", size = 0.5)) +
+#geom_text(nudge_y=(1)) +
+#facet_wrap( ~ Alternative.Host, nrow=3)
+yieldpp.fig
+
+
+```
+
+
+### Total pea pods/plant
+```{r total_pea_pods_per_plant, echo = F}
+
+pupae %>% 
+    select(Predator.Treatment,
+           Plant.Treatment,
+           pea.pods,
+           median.count) %>% 
+    group_by(Plant.Treatment,
+             Predator.Treatment) %>% 
+    summarise(num.peas = sum(pea.pods),
+              num.plants = sum(median.count)) %>% 
+    mutate(peas.per.plant = num.peas/num.plants) %>% 
+    ggplot(., aes(x = Plant.Treatment,
+                  y = peas.per.plant,
+                  fill = Predator.Treatment)) +
+    geom_bar(stat = "identity", position = "dodge")
+
+```
+
+## Session Information
+
+```{r Session_Info, echo = F, comment = ""}
+
+# Add session information to help with reproduceability
+sessionInfo()
+
+
+```
+
+

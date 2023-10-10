@@ -1,0 +1,133 @@
+---
+title: "Peas Out Rob"
+author: "Rob Clark & Riley Anderson"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+graphics: yes
+output:
+  pdf_document:
+    toc: yes
+  github_document:
+    toc: yes
+    toc_depth: 5
+    pandoc_args: --webtex
+  html_notebook:
+    code_folding: hide
+    theme: readable
+    mathjax: default
+  html_document:
+    keep_md: yes
+    theme: readable
+    mathjax: default
+header-includes:
+  \usepackage{float}
+  \floatplacement{figure}{H}
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include = F}
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# @@@@@ Knitr Options
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Set root directory to the project directory
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+
+# Set default knitr options: 
+# Suppress warnings and messages, cache chunks, 
+#  set default figure size to 6x8 at 300 dpi, and save a png and pdf
+knitr::opts_chunk$set(warning = F, message = F, collapse = T, cache = T,
+    fig.height = 6, fig.width = 8, dpi = 300, # 6x8" @ 300dpi:1800x2400=4.3MP
+    dev = c('png', 'pdf'), dev.args = list(pdf = list(onefile = F)))
+
+```
+
+
+
+## Overview
+
+This analysis explores Rob Clark's "Peas Out" data. 
+
+## Experimental Design
+
+24 bug dorms (2m x 2m x 2m) were established on an experimental farm plot that was sown with banner pea. The dorms were laid out in a square design with 8 control dorms in the center. Control dorms were flanked by 2 sides (4 dorms/side) where common vetch was planted in the distal half (the outer circumference of the square) and banner pea was planted in the proximal half (the inner circumference of the square). Diagonally from the vetch dorms were 2 sides similarly planted with red clover.
+
+
+
+```{r experimmental_design_image}
+
+knitr::include_graphics("images/peas.out.design.png", error = FALSE)
+
+
+```
+
+
+
+### Summary of Results
+* 
+
+```{r Main_Code, include = F, cache = F}
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# @@@@@ Setup - This code is run, but output is hidden
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Load Packages
+library("lme4")
+library("car")
+library("multcomp")
+library(tidyverse)
+library("emmeans")
+library("MuMIn")
+library("piecewiseSEM")
+library("multcompView")
+library(glmmTMB)
+library(sjPlot)
+
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+# @@@@@ Data Preparation
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+# Import datasets
+
+
+po.virus.dat <- read.csv("data/POEdata/peas.out.pemv.csv", header=TRUE)
+
+aphid.dat <- read.csv("data/POEdata/peas.out.csv", header = TRUE)
+
+weevils <- read.csv("data/POEdata/weevils.csv", header=TRUE)
+
+pupae <- read.csv("data/POEdata/predators.csv", header=TRUE)
+
+shark.dat <- read.csv("data/STEdata/shark.tank.csv", header=TRUE)
+
+```
+
+
+```{r Data_Wrangling, echo = F, comment = ""}
+
+# Put data wrangling code here
+
+```
+
+
+```{r Graph_name, echo = F}
+
+# Put each graph in a separate code block with a different name
+
+```
+
+
+## Session Information
+
+```{r Session_Info, echo = F, comment = ""}
+
+# Add session information to help with reproduceability
+sessionInfo()
+
+
+```
+
+
